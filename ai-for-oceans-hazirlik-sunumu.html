@@ -208,6 +208,25 @@
   #pat-feedback{min-height:2.2em; max-width:680px; font-weight:700; color:var(--sun)}
   /* robot deneyi */
   #robot-stage{font-size:clamp(3rem,7vw,5rem); min-height:1.3em}
+  #robot-stage.think{animation:think .5s ease-in-out infinite}
+  @keyframes think{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}
+  .train-box{
+    display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:center;
+    background:rgba(255,255,255,.1); border-radius:12px; padding:10px 18px;
+  }
+  .train-label{font-weight:700; color:var(--sun)}
+  .tfish{font-size:1.7rem; background:rgba(255,255,255,.14); border-radius:10px;
+    padding:.1em .35em; margin:0 2px; display:inline-block}
+  .tnote{font-weight:700; color:var(--foam)}
+  .robot-speech{
+    background:#fff; color:var(--deep); font-weight:600; max-width:680px;
+    border-radius:16px; padding:14px 22px; position:relative;
+    font-size:clamp(1rem,2vw,1.3rem); box-shadow:0 6px 20px rgba(80,0,0,.3);
+  }
+  .robot-speech::before{
+    content:""; position:absolute; top:-10px; left:50%; transform:translateX(-50%);
+    border:10px solid transparent; border-bottom-color:#fff; border-top:none;
+  }
   /* nav */
   .nav{
     position:fixed; bottom:0; left:0; right:0; display:flex; align-items:center;
@@ -363,8 +382,14 @@
 <section class="slide">
   <span class="tag">Robot Deneyi</span>
   <h2>Robot Balıkçık'ı test edelim 🤖</h2>
-  <div class="bubble"><p id="robot-text">Balıkçık'ı <b>sadece turuncu balıklarla</b> eğittik: 🐠 🐠 🐠<br>Sence her balığı tanıyabilir mi?</p></div>
+  <div class="train-box">
+    <span class="train-label">📚 Eğitim verisi:</span>
+    <span id="train-row"><span class="tfish">🐠</span><span class="tfish">🐠</span><span class="tfish">🐠</span></span>
+    <span class="tnote" id="train-note">sadece turuncu balıklar!</span>
+  </div>
   <div id="robot-stage">🤖</div>
+  <div class="robot-speech" id="robot-speech">BİP! Ben Balıkçık. Balıkları tanımayı öğrendim… sanırım! 🤖</div>
+  <p id="robot-question">Sence <b>her</b> balığı tanıyabilir mi?</p>
   <button class="gbtn fish" id="robot-btn" onclick="robot()">Ona mor bir balık göster! 🟣</button>
 </section>
 
@@ -543,23 +568,48 @@ function pat(a){
 }
 
 // robot deneyi: önyargılı Balıkçık
-var robotStep=0;
+var robotStep=0, robotBusy=false;
+function robotThink(stage,sp,btn,thenFn){ // düşünme animasyonu + sonuç
+  robotBusy=true; btn.style.visibility='hidden';
+  stage.classList.add('think');
+  sp.textContent='🤔 BİP BİP… inceliyorum…';
+  setTimeout(()=>{
+    stage.classList.remove('think');
+    thenFn();
+    robotBusy=false;
+    btn.style.visibility='visible';
+  },1400);
+}
 function robot(){
-  const txt=document.getElementById('robot-text');
+  if(robotBusy)return;
+  const sp=document.getElementById('robot-speech');
   const stage=document.getElementById('robot-stage');
   const btn=document.getElementById('robot-btn');
+  const q=document.getElementById('robot-question');
   robotStep++;
   if(robotStep===1){
-    stage.textContent='🤖👀🐟';
-    txt.innerHTML='🤖 <b>"BİP! BU BİR ÇÖP!"</b><br>Ama o mor bir balıktı! 😱 Balıkçık mor balığı hiç görmedi ki — eğitim verisinde yoktu!';
-    btn.textContent='Nasıl düzeltiriz? 🔧';
+    q.style.display='none';
+    stage.textContent='🤖 👀 🐟';
+    robotThink(stage,sp,btn,()=>{
+      sp.innerHTML='🚨 <b>"BU BİR ÇÖP! HEMEN ATIYORUM!"</b><br>…Ama o mor bir <b>balıktı!</b> 😱 Balıkçık mor balığı hiç görmedi ki — eğitim verisinde yoktu!';
+      btn.textContent='Onu yeniden eğitelim! 🔧';
+    });
   }else if(robotStep===2){
-    stage.textContent='🐠🐡🐟🦈🪼';
-    txt.innerHTML='Bu kez ona <b>her renkten ve türden</b> balık gösterdik. Eğitim verisi artık çok daha çeşitli!';
+    document.getElementById('train-row').innerHTML=
+      '<span class="tfish">🐠</span><span class="tfish">🐡</span><span class="tfish">🐟</span><span class="tfish">🦈</span><span class="tfish">🪼</span>';
+    document.getElementById('train-note').textContent='her renk, her tür!';
+    stage.textContent='🤖📚';
+    sp.innerHTML='📖 BİP! Yeni veriyle öğreniyorum… Ooo, meğer balıklar <b>her renkte</b> olabiliyormuş!';
     btn.textContent='Şimdi tekrar test et! 🟣';
+  }else if(robotStep===3){
+    stage.textContent='🤖 👀 🐟';
+    robotThink(stage,sp,btn,()=>{
+      sp.innerHTML='💚 <b>"BU BİR BALIK! MERHABA BALIK!"</b> ✅ Artık tanıyorum!';
+      btn.textContent='Deneyden ne öğrendik? 🧪';
+    });
   }else{
-    stage.textContent='🤖💚🐟';
-    txt.innerHTML='🤖 <b>"BİP! MERHABA BALIK!"</b> ✅<br>Çeşitli veri = adil ve akıllı model. Az çeşitli veri = <b>önyargı!</b> Bunu birazdan yine göreceğiz.';
+    stage.textContent='🏆';
+    sp.innerHTML='🧪 <b>DENEY BİTTİ!</b> Çeşitli veri = adil ve akıllı model.<br>Az çeşitli veri = <b>önyargı!</b> Sıradaki slaytta bunu konuşacağız ▶';
     btn.style.display='none';
   }
 }
