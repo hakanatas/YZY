@@ -207,17 +207,29 @@
   #pat-item{font-size:clamp(1.4rem,3vw,2.1rem); font-weight:700}
   #pat-feedback{min-height:2.2em; max-width:680px; font-weight:700; color:var(--sun)}
   /* robot deneyi */
-  #robot-stage{font-size:clamp(3rem,7vw,5rem); min-height:1.3em}
-  #robot-stage.think{animation:think .5s ease-in-out infinite}
-  @keyframes think{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}
   .train-box{
     display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:center;
-    background:rgba(255,255,255,.1); border-radius:12px; padding:10px 18px;
+    background:rgba(255,255,255,.1); border-radius:12px; padding:10px 18px; max-width:860px;
   }
   .train-label{font-weight:700; color:var(--sun)}
-  .tfish{font-size:1.7rem; background:rgba(255,255,255,.14); border-radius:10px;
-    padding:.1em .35em; margin:0 2px; display:inline-block}
-  .tnote{font-weight:700; color:var(--foam)}
+  #train-row{display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:center}
+  .titem{display:flex; flex-direction:column; align-items:center; gap:2px;
+    background:rgba(255,255,255,.14); border-radius:10px; padding:6px 10px}
+  .titem small{font-weight:800; font-size:.72rem; letter-spacing:.04em}
+  .titem small.lbl-fish{color:#7dffd8}
+  .titem small.lbl-not{color:var(--foam)}
+  .test-row{display:flex; flex-wrap:wrap; gap:16px; justify-content:center}
+  .test-card{
+    background:rgba(255,255,255,.12); border:2px solid rgba(255,255,255,.4);
+    border-radius:14px; padding:14px 16px 10px; cursor:pointer; width:150px;
+    transition:transform .15s, background .15s;
+  }
+  .test-card:hover{transform:translateY(-4px); background:rgba(255,255,255,.2)}
+  .test-card.ok{border-color:var(--kelp); background:rgba(46,196,166,.28)}
+  .test-card.bad{border-color:var(--sun); background:rgba(255,209,102,.22)}
+  .test-card .art{display:flex; justify-content:center; min-height:44px}
+  .test-card .verdict{font-weight:800; min-height:2.6em; font-size:.92rem; margin-top:6px; line-height:1.25}
+  .test-card .verdict small{font-weight:600; color:var(--foam)}
   .robot-speech{
     background:#fff; color:var(--deep); font-weight:600; max-width:680px;
     border-radius:16px; padding:14px 22px; position:relative;
@@ -382,16 +394,18 @@
 <!-- 6b ROBOT DENEYİ -->
 <section class="slide">
   <span class="tag">Robot Deneyi</span>
-  <h2>Robot Balıkçık'ı test edelim 🤖</h2>
+  <h2>Müfettiş Robot'u test et! 🤖</h2>
   <div class="train-box">
-    <span class="train-label">📚 Eğitim verisi:</span>
-    <span id="train-row"><span class="tfish">🐠</span><span class="tfish">🐠</span><span class="tfish">🐠</span></span>
-    <span class="tnote" id="train-note">sadece turuncu balıklar!</span>
+    <span class="train-label">📚 Robotun eğitim verisi:</span>
+    <span id="train-row"></span>
   </div>
-  <div id="robot-stage">🤖</div>
-  <div class="robot-speech" id="robot-speech">BİP! Ben Balıkçık. Balıkları tanımayı öğrendim… sanırım! 🤖</div>
-  <p id="robot-question">Sence <b>her</b> balığı tanıyabilir mi?</p>
-  <button class="gbtn fish" id="robot-btn" onclick="robot()">Ona mor bir balık göster! 🟣</button>
+  <div class="robot-speech" id="robot-speech">🤖 BİP! Eğitimimi tamamladım, artık balıkları tanırım! Bana inanma — <b>aşağıdaki kartlara tıklayıp beni test et</b> 👇</div>
+  <div class="test-row" id="test-row">
+    <div class="test-card" onclick="rTest(this,0)"><div class="art"></div><div class="verdict">?</div></div>
+    <div class="test-card" onclick="rTest(this,1)"><div class="art"></div><div class="verdict">?</div></div>
+    <div class="test-card" onclick="rTest(this,2)"><div class="art"></div><div class="verdict">?</div></div>
+  </div>
+  <button class="gbtn fish" id="robot-btn" onclick="rNext()" style="visibility:hidden">Çeşitli veriyle yeniden eğit! 🔧</button>
 </section>
 
 <!-- 7 ÖNYARGI -->
@@ -571,52 +585,76 @@ function pat(a){
   }
 }
 
-// robot deneyi: önyargılı Balıkçık
-var robotStep=0, robotBusy=false;
-function robotThink(stage,sp,btn,thenFn){ // düşünme animasyonu + sonuç
-  robotBusy=true; btn.style.visibility='hidden';
-  stage.classList.add('think');
-  sp.textContent='🤔 BİP BİP… inceliyorum…';
-  setTimeout(()=>{
-    stage.classList.remove('think');
-    thenFn();
-    robotBusy=false;
-    btn.style.visibility='visible';
-  },1400);
+// robot deneyi: önyargılı Müfettiş Robot (SVG — renkler her cihazda aynı)
+const fishSVG=(c,w)=>'<svg viewBox="0 0 64 40" width="'+(w||52)+'" aria-hidden="true">'+
+  '<path d="M6 20 L20 7 L20 33 Z" fill="'+c+'"/>'+
+  '<ellipse cx="38" cy="20" rx="19" ry="13" fill="'+c+'"/>'+
+  '<path d="M33 9 q6 -6 12 0 l-6 6 Z" fill="'+c+'" opacity=".8"/>'+
+  '<circle cx="46" cy="16" r="3" fill="#fff"/><circle cx="47" cy="16" r="1.4" fill="#222"/></svg>';
+const bootSVG=(w)=>'<svg viewBox="0 0 64 40" width="'+(w||52)+'" aria-hidden="true">'+
+  '<path d="M22 3 h14 v17 q13 2 15 12 l0 2 h-29 Z" fill="#ff8c1a"/>'+
+  '<rect x="20" y="33" width="33" height="5" rx="2.5" fill="#8a4500"/>'+
+  '<line x1="27" y1="7" x2="33" y2="7" stroke="#8a4500" stroke-width="2"/>'+
+  '<line x1="27" y1="12" x2="33" y2="12" stroke="#8a4500" stroke-width="2"/></svg>';
+const ORANGE='#ff8c1a', PURPLE='#b46ee6', GREEN='#2ec4a6';
+var rPhase=1, rClicked=0;
+const rVerdicts={
+  1:[
+    {v:'🤖 "BALIK!" ✅', note:'Doğru bildi.', cls:'ok'},
+    {v:'🤖 "ÇÖP!" ❌',  note:'Ama o bir balıktı!', cls:'bad'},
+    {v:'🤖 "BALIK!" ⁉️', note:'Ama o bir çizme!', cls:'bad'}
+  ],
+  2:[
+    {v:'🤖 "BALIK!" ✅', note:'Doğru.', cls:'ok'},
+    {v:'🤖 "BALIK!" ✅', note:'Artık tanıyor!', cls:'ok'},
+    {v:'🤖 "ÇÖP!" ✅',  note:'Çizmeye kanmadı!', cls:'ok'}
+  ]
+};
+function rInit(){ // eğitim verisi + test kartlarının görselleri
+  document.getElementById('train-row').innerHTML=
+    '<span class="titem">'+fishSVG(ORANGE,44)+'<small class="lbl-fish">BALIK</small></span>'+
+    '<span class="titem">'+fishSVG(ORANGE,44)+'<small class="lbl-fish">BALIK</small></span>'+
+    '<span class="titem">'+fishSVG(ORANGE,44)+'<small class="lbl-fish">BALIK</small></span>'+
+    '<span class="tnote" style="font-weight:700;color:var(--foam)">← hepsi turuncu!</span>';
+  const arts=document.querySelectorAll('#test-row .art');
+  arts[0].innerHTML=fishSVG(ORANGE);
+  arts[1].innerHTML=fishSVG(PURPLE);
+  arts[2].innerHTML=bootSVG();
 }
-function robot(){
-  if(robotBusy)return;
+function rTest(card,i){
+  if(card.dataset.done||rClicked>=3&&rPhase===2)return;
+  card.dataset.done='1';
+  const d=rVerdicts[rPhase][i];
+  card.querySelector('.verdict').innerHTML=d.v+'<br><small>'+d.note+'</small>';
+  card.classList.add(d.cls);
+  rClicked++;
   const sp=document.getElementById('robot-speech');
-  const stage=document.getElementById('robot-stage');
-  const btn=document.getElementById('robot-btn');
-  const q=document.getElementById('robot-question');
-  robotStep++;
-  if(robotStep===1){
-    q.style.display='none';
-    stage.textContent='🤖 👀 🐟';
-    robotThink(stage,sp,btn,()=>{
-      sp.innerHTML='🚨 <b>"BU BİR ÇÖP! HEMEN ATIYORUM!"</b><br>…Ama o mor bir <b>balıktı!</b> 😱 Balıkçık mor balığı hiç görmedi ki — eğitim verisinde yoktu!';
-      btn.textContent='Onu yeniden eğitelim! 🔧';
-    });
-  }else if(robotStep===2){
-    document.getElementById('train-row').innerHTML=
-      '<span class="tfish">🐠</span><span class="tfish">🐡</span><span class="tfish">🐟</span><span class="tfish">🦈</span><span class="tfish">🪼</span>';
-    document.getElementById('train-note').textContent='her renk, her tür!';
-    stage.textContent='🤖📚';
-    sp.innerHTML='📖 BİP! Yeni veriyle öğreniyorum… Ooo, meğer balıklar <b>her renkte</b> olabiliyormuş!';
-    btn.textContent='Şimdi tekrar test et! 🟣';
-  }else if(robotStep===3){
-    stage.textContent='🤖 👀 🐟';
-    robotThink(stage,sp,btn,()=>{
-      sp.innerHTML='💚 <b>"BU BİR BALIK! MERHABA BALIK!"</b> ✅ Artık tanıyorum!';
-      btn.textContent='Deneyden ne öğrendik? 🧪';
-    });
-  }else{
-    stage.textContent='🏆';
-    sp.innerHTML='🧪 <b>DENEY BİTTİ!</b> Çeşitli veri = adil ve akıllı model.<br>Az çeşitli veri = <b>önyargı!</b> Sıradaki slaytta bunu konuşacağız ▶';
-    btn.style.display='none';
+  if(rClicked===3){
+    if(rPhase===1){
+      sp.innerHTML='😱 Fark ettin mi? Robot <b>balığı değil, TURUNCU RENGİ</b> öğrenmiş! Çünkü eğitim verisinde sadece turuncu balıklar vardı. İşte buna <b>önyargı</b> denir!';
+      document.getElementById('robot-btn').style.visibility='visible';
+    }else{
+      sp.innerHTML='🏆 <b>DENEY BİTTİ!</b> Çeşitli eğitim verisi = şekle bakan adil robot. Az çeşitli veri = renge takılan <b>önyargılı</b> robot! ▶ İleri tuşuyla devam et.';
+    }
   }
 }
+function rNext(){ // çeşitli veriyle yeniden eğit
+  rPhase=2; rClicked=0;
+  document.getElementById('robot-btn').style.visibility='hidden';
+  document.getElementById('train-row').innerHTML=
+    '<span class="titem">'+fishSVG(ORANGE,44)+'<small class="lbl-fish">BALIK</small></span>'+
+    '<span class="titem">'+fishSVG(PURPLE,44)+'<small class="lbl-fish">BALIK</small></span>'+
+    '<span class="titem">'+fishSVG(GREEN,44)+'<small class="lbl-fish">BALIK</small></span>'+
+    '<span class="titem">'+bootSVG(44)+'<small class="lbl-not">BALIK DEĞİL</small></span>';
+  document.querySelectorAll('#test-row .test-card').forEach(c=>{
+    delete c.dataset.done;
+    c.classList.remove('ok','bad');
+    c.querySelector('.verdict').textContent='?';
+  });
+  document.getElementById('robot-speech').innerHTML=
+    '📖 BİP! Yeni veriler geldi: <b>her renkten balık</b> ve <b>balık olmayanlar</b> da var. Yeniden öğrendim! Şimdi beni tekrar test et 👇';
+}
+rInit();
 
 // son kontrol listesi
 document.querySelectorAll('#checklist .chk').forEach(c=>{
