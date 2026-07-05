@@ -238,6 +238,7 @@
     font-size:1rem; padding:.6em 1.4em; border-radius:10px; cursor:pointer; font-family:inherit;
   }
   .nav button:disabled{opacity:.3; cursor:default}
+  .count{color:var(--foam); font-weight:700; font-size:.95rem; min-width:58px; text-align:center}
   .dots{display:flex; gap:8px}
   .dot{width:11px; height:11px; border-radius:50%; background:rgba(255,255,255,.35); cursor:pointer}
   .dot.on{background:var(--sun)}
@@ -270,7 +271,7 @@
       alt="Vodafone Vakfı | Habitat" loading="eager">
   </div>
   <p class="intro-partner">Skills Upload Jr iş birliğiyle</p>
-  <p class="hint">Başlamak için İleri tuşuna bas ▶</p>
+  <p class="hint">Başlamak için İleri tuşuna bas ▶ &nbsp;·&nbsp; Tam ekran için F11 🖥️</p>
 </section>
 
 <!-- 1 KAPAK -->
@@ -368,7 +369,7 @@
   <p>Yapay zekâya öğreteceğimiz gibi: gördüğün şey balık mı, çöp mü?</p>
   <div id="game">
     <div id="game-item">🐠</div>
-    <div class="game-btns">
+    <div class="game-btns" id="game-btns">
       <button class="gbtn fish" onclick="answer('fish')">🐟 Balık</button>
       <button class="gbtn trash" onclick="answer('trash')">🗑️ Çöp</button>
     </div>
@@ -452,6 +453,7 @@
 <nav class="nav">
   <button id="prev" onclick="go(-1)">◀ Geri</button>
   <div class="dots" id="dots"></div>
+  <span class="count" id="count"></span>
   <button id="next" onclick="go(1)">İleri ▶</button>
 </nav>
 
@@ -473,12 +475,14 @@ function show(i){
   dots.children[cur].classList.add('on');
   document.getElementById('prev').disabled=cur===0;
   document.getElementById('next').disabled=cur===slides.length-1;
+  document.getElementById('count').textContent=(cur+1)+' / '+slides.length;
   initScratch(); // kazı kazan görünür olunca hazırla
 }
 function go(d){show(cur+d)}
 document.addEventListener('keydown',e=>{
-  if(e.key==='ArrowRight'||e.key===' ')go(1);
-  if(e.key==='ArrowLeft')go(-1);
+  if(e.key==='ArrowRight'||e.key==='PageDown')go(1); // PageDown/Up: sunum kumandası
+  else if(e.key==='ArrowLeft'||e.key==='PageUp')go(-1);
+  else if(e.key===' '&&e.target===document.body)go(1); // buton odaktayken boşluk slayt atlatmasın
 });
 show(0);
 
@@ -548,7 +552,7 @@ function quiz(a){
 const pItems=[
   {t:'🎃 Peki bu bir Blub mu?', yes:true,  ok:'Doğru, bu bir Blub! Kuralı sezmeye başladın mı?',        no:'Bu aslında bir Blub\'dı! Örneklere tekrar bak…'},
   {t:'🫐 Ya bu?',               yes:false, ok:'Doğru, bu Blub değil! Ortak özelliği buldun mu?',        no:'Bu Blub değildi! İpucu: Blub\'ların ortak bir özelliği var…'},
-  {t:'🍁 Son soru: bu?',        yes:true,  ok:'Doğru, bu da bir Blub!',                                 no:'Bu bir Blub\'dı!'}
+  {t:'🏀 Son soru: bu?',        yes:true,  ok:'Doğru, bu da bir Blub!',                                 no:'Bu bir Blub\'dı!'}
 ];
 let pi=0,pScore=0;
 function pat(a){
@@ -703,10 +707,15 @@ function answer(a){
   if(a===items[gi].t){score++;fb.textContent='✅ Doğru etiket!';}
   else{fb.textContent='❌ Hmm… model bunu yanlış öğrenirdi!';}
   gi++;
-  document.getElementById('game-score').textContent=
-    gi<items.length?`Etiketlenen: ${gi} / ${items.length}`:`Bitti! Doğru etiket: ${score}/${items.length} 🎉`;
-  document.getElementById('game-item').textContent=
-    gi<items.length?items[gi].e:'🌊';
+  if(gi<items.length){
+    document.getElementById('game-score').textContent=`Etiketlenen: ${gi} / ${items.length}`;
+    document.getElementById('game-item').textContent=items[gi].e;
+  }else{ // net bitiş ekranı
+    document.getElementById('game-btns').style.display='none';
+    document.getElementById('game-item').textContent='🎉';
+    document.getElementById('game-score').innerHTML=
+      `<b style="color:var(--sun);font-size:1.3em">EĞİTİM BİTTİ! ${score} / ${items.length} doğru etiket</b><br>Her etiketin, modelin bir ders notuydu. Etkinlikte bunu gerçek modelle yapacaksın! ▶`;
+  }
 }
 </script>
 </body>
